@@ -119,9 +119,29 @@ static void osprd_process_request(osprd_info_t *d, struct request *req)
 	// Read about 'struct request' in <linux/blkdev.h>.
 	// Consider the 'req->sector', 'req->current_nr_sectors', and
 	// 'req->buffer' members, and the rq_data_dir() function.
-
-	// Your code here.
-	eprintk("Should process request...\n");
+	
+	if(rq_data_dir(req)) {//write mode
+	  int i, j;
+	  for(i = 0; i < req->current_nr_sectors; i++) {
+	    int sec_d = (req->sector + i)*SECTOR_SIZE;
+	    int sec_r = SECTOR_SIZE*i;
+	    for(j = 0; j < SECTOR_SIZE; j++) {
+	      d->data[sec_d+j] = req->buffer[sec_r+j];
+	    }
+	  }
+	}
+	else { //otherwise, read
+	  int i, j;
+	  for(i = 0; i < req->current_nr_sectors; i++) {
+	    int sec_d = (req->sector + i)*SECTOR_SIZE;
+	    int sec_r = SECTOR_SIZE*i;
+	    for(j = 0; j < SECTOR_SIZE; j++) {
+	      req->buffer[sec_r+j] = d->data[sec_d+j];
+	    }
+	  }
+	}
+	
+	//eprintk("Should process request...\n");
 
 	end_request(req, 1);
 }
