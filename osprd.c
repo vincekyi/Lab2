@@ -34,7 +34,7 @@
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_DESCRIPTION("CS 111 RAM Disk");
 // EXERCISE: Pass your names into the kernel as the module's authors.
-MODULE_AUTHOR("Skeletor");
+MODULE_AUTHOR("Vincent Cheung and Vincent Kyi");
 
 #define OSPRD_MAJOR	222
 
@@ -171,6 +171,8 @@ static int osprd_close_last(struct inode *inode, struct file *filp)
 		// a lock, release the lock.  Also wake up blocked processes
 		// as appropriate.
 
+		osprd_ioctl(inode, flip, OSPRDIOCRELEASE, 0); //dont think arg matters? it might when we actually implement the OSPRDIOCRELEASE 
+		
 		// Your code here.
 
 		// This line avoids compiler warnings; you may remove it.
@@ -242,6 +244,17 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 		// be protected by a spinlock; which ones?)
 
 		// Your code here (instead of the next two lines).
+
+		for(;;){
+			if(filp_writable){ //*filp is open for writing
+				
+
+				break;
+			}// *filp is open for reading
+
+
+			break;
+		}
 		eprintk("Attempting to acquire\n");
 		r = -ENOTTY;
 
