@@ -280,7 +280,7 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 		osp_spin_unlock(&d->mutex);
 
 		if(filp_writable){ //   *filp is open for writing
-				if(-ERESTARTSYS == wait_event_interruptible(d->blockq, (0 == d->is_write_locked) && (d->num_read_locks == 0) && (d->ticket_tail >= local_ticket))){
+				if(-ERESTARTSYS == wait_event_interruptible(d->blockq, (0 == d->is_write_locked) && (d->num_read_locks == 0)  && (d->ticket_tail >= local_ticket))){
 					return -ERESTARTSYS;
 				}
 				osp_spin_lock(&d->mutex);
@@ -291,7 +291,7 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 				osp_spin_unlock(&d->mutex);														
 		}
 		else {// *filp is open for reading
-				if(-ERESTARTSYS == wait_event_interruptible(d->blockq, (0 == d->is_write_locked) && (d->ticket_tail >= local_ticket))){
+				if(-ERESTARTSYS == wait_event_interruptible(d->blockq, (0 == d->is_write_locked)  && (d->ticket_tail >= local_ticket) )){
 					return -ERESTARTSYS;
 				}
 
@@ -302,7 +302,7 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 				osp_spin_lock(&d->mutex);
 				d->num_read_locks++;
 				d->ticket_tail++;
-							if(d->reading_procs == NULL){
+				if(d->reading_procs == NULL){
 					d->reading_procs = this_node;
 				}
 				else{
@@ -373,7 +373,8 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 				osp_spin_unlock(&d->mutex);
 				r = 0;
 			}
-			else {
+			else {	
+				osp_spin_unlock(&d->mutex);
 				r = -EBUSY;
 				kfree(this_node);
 			}
@@ -394,6 +395,8 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 		}
 		osp_spin_lock(&d->mutex);
 		filp->f_flags = 0x00000;
+		//d->writing_proc = -1; d->is_write_locked = 0; d->num_read_locks = 0;
+
 		if(filp_writable){
 			d->writing_proc = -1;
 			d->is_write_locked = 0;
