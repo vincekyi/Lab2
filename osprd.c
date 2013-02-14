@@ -270,8 +270,11 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 			if(temp->p == current->pid){
 				return -EDEADLK;
 			}
+			
 		}
-
+		if(filp->f_flags == F_OSPRD_LOCKED){
+			return -EDEADLK;
+		}
 		unsigned local_ticket;
 		local_ticket = d->ticket_head;
 		//lock to incr ticket head
@@ -336,6 +339,9 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 			if(temp->p == current->pid){
 				return -EDEADLK;
 			}
+		}
+		if(filp->f_flags == F_OSPRD_LOCKED){
+			return -EDEADLK;
 		}
 
 		if(filp_writable){
