@@ -272,7 +272,7 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 			}
 			
 		}
-		if(filp->f_flags == F_OSPRD_LOCKED){
+		if(filp->f_flags & F_OSPRD_LOCKED){
 			return -EDEADLK;
 		}
 		unsigned local_ticket;
@@ -340,7 +340,7 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 				return -EDEADLK;
 			}
 		}
-		if(filp->f_flags == F_OSPRD_LOCKED){
+		if(filp->f_flags & F_OSPRD_LOCKED){
 			return -EDEADLK;
 		}
 
@@ -396,11 +396,13 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 		// you need, and return 0.
 
 		//check if locked
-		if(filp->f_flags != F_OSPRD_LOCKED){ //not locked
+		if((filp->f_flags & F_OSPRD_LOCKED)==0){ //not locked
+			//eprintk("messed up\n");
 			return -EINVAL;
 		}
+		//eprintk("releasing lock");
 		osp_spin_lock(&d->mutex);
-		filp->f_flags = 0x00000;
+		filp->f_flags &=~F_OSPRD_LOCKED;
 		//d->writing_proc = -1; d->is_write_locked = 0; d->num_read_locks = 0;
 
 		if(filp_writable){
@@ -420,8 +422,8 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 				temp_prev = iter;
 			}
 		}
-		wake_up_interruptible_all(&d->blockq);
 		osp_spin_unlock(&d->mutex);
+		wake_up_all(&d->blockq);
 		// Your code here (instead of the next line).
 		r = 0;
 
