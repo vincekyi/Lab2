@@ -184,10 +184,8 @@ static int osprd_close_last(struct inode *inode, struct file *filp)
 		// a lock, release the lock.  Also wake up blocked processes
 		// as appropriate.
 
-		osprd_ioctl(inode, filp, OSPRDIOCRELEASE, 0); //dont think arg matters? it might when we actually implement the OSPRDIOCRELEASE 
+		return osprd_ioctl(inode, filp, OSPRDIOCRELEASE, 0); //dont think arg matters? it might when we actually implement the OSPRDIOCRELEASE 
 		
-		// Your code here.
-
 		// This line avoids compiler warnings; you may remove it.
 		(void) filp_writable, (void) d;
 
@@ -291,12 +289,12 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 				d->writing_proc = current->pid;
 				d->ticket_tail++;
 				filp->f_flags |= F_OSPRD_LOCKED;
-				osp_spin_unlock(&d->mutex);														
+				osp_spin_unlock(&d->mutex);													
 		}
 		else {// *filp is open for reading
-				if(-ERESTARTSYS == wait_event_interruptible(d->blockq, (0 == d->is_write_locked)  && (d->ticket_tail >= local_ticket) )){
+				/*if(-ERESTARTSYS ==*/ wait_event_interruptible(d->blockq, (0 == d->is_write_locked)  && (d->ticket_tail >= local_ticket) ); /*){
 					return -ERESTARTSYS;
-				}
+				} */
 
 				struct pid_list* this_node = (struct pid_list*) kmalloc(sizeof(struct pid_list), GFP_ATOMIC);
 				this_node->next = NULL;
@@ -410,16 +408,25 @@ int osprd_ioctl(struct inode *inode, struct file *filp,
 			d->is_write_locked = 0;
 		}
 		else{
+			if(d->num_read_locks == 0){
+				return -EINVAL;
+			}
 			d->num_read_locks--;
 			struct	pid_list *iter;
 			struct pid_list *temp_prev = NULL;
-			for(iter = d->reading_procs; iter != NULL; iter = iter->next){
-				if(iter->p == current->pid){
-					temp_prev->next = iter->next;
-					kfree(iter);
-					break;
+			if(d->reading_procs->p == current->pid){
+				kfree(d->reading_procs);
+				d->reading_procs = NULL;
+			}
+			else{
+				for(iter = d->reading_procs->next; iter != NULL; iter = iter->next){
+					if(iter->p == current->pid){
+						temp_prev->next = iter->next;
+						kfree(iter);
+						break;
+					}
+					temp_prev = iter;
 				}
-				temp_prev = iter;
 			}
 		}
 		osp_spin_unlock(&d->mutex);
